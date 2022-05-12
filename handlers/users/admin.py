@@ -1,3 +1,5 @@
+from datetime import time, date
+
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.dispatcher import FSMContext
 
@@ -6,6 +8,8 @@ from data.config import admin_id
 from utils.misc import rate_limit
 from keyboards.default import show_keyboard
 from states import ProcedureState, WorkdayState
+from utils.db_api import ProcedureCRUD, WorkdayCRUD
+
 
 orders = [
     "процедура 1: 13.05.2022 на 17:15",
@@ -42,16 +46,18 @@ async def answer_name(message: Message, state: FSMContext):
     # async with state.proxy() as data:
     #     data["name_procedure"] = name_procedure
     await state.update_data(name_procedure=name_procedure.capitalize())
-    await message.answer("Введите длительность процедуры:")
+    await message.answer("Введите длительность процедуры в формате ЧЧ.ММ:")
     await ProcedureState.next()
 
 
 @dp.message_handler(state=ProcedureState.Duration)
 async def answer_duration(message: Message, state: FSMContext):
     duration_procedure = message.text
-    # async with state.proxy() as data:
-    #     data["duration_procedure"] = duration_procedure
-    await state.update_data(duration_procedure=duration_procedure)
+    await state.update_data(procedure_duration=duration_procedure)
+    duration_procedure = duration_procedure.split(".")
+    duration_procedure = list(map(int, duration_procedure))
+    await state.update_data(hours=duration_procedure[0])
+    await state.update_data(minutes=duration_procedure[1])
     await message.answer("Введите стоимость процедуры:")
     await ProcedureState.next()
 
@@ -61,12 +67,20 @@ async def answer_cost(message: Message, state: FSMContext):
     data = await state.get_data()
     cost_procedure = int(message.text)
     name_procedure = data.get("name_procedure")
-    duration_procedure = data.get("duration_procedure")
-    # ProcedureCRUD.add_procedure(procedure_name=name_procedure,
-    #                             procedure_duration=duration_procedure,
-    #                             cost=cost_procedure)
+    procedure_duration = data.get("procedure_duration")
+    # hours = data.get("hours")
+    # minutes = data.get("minutes")
+    # procedure = {
+    #     "procedure_name": name_procedure,
+    #     "procedure_duration": time(hours, minutes),
+    #     "cost": cost_procedure
+    # }
+    ProcedureCRUD.add_procedure(procedure_name=name_procedure,
+                                procedure_duration=procedure_duration,
+                                cost=cost_procedure
+                                )
     await message.answer(f"Добавлена процедура: {name_procedure} \n"
-                         f"Длительностью: {duration_procedure} \n"
+                         f"Длительностью: {procedure_duration} \n"
                          f"Стоимостью: {cost_procedure} BYN")
     await state.finish()
     await message.answer("Что вы хотите сделать?",
@@ -114,5 +128,7 @@ async def cancel(message: Message):
 @rate_limit(3, 'Показать записи')
 @dp.message_handler(user_id=admin_id, text="Показать записи")
 async def show_registry(message: Message):
-    for order in orders:
-        await message.answer(f"{order}")
+    workdays = WorkdayCRUD.get_my_workdays()
+    for workday in workdays:
+        workday = workday[0]
+        await message.answer(f"{workday.workday} {workday.worktime}")
