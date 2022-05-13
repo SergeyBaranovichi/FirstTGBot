@@ -19,18 +19,21 @@ class UserCRUD(object):
             session.commit()
 
     @staticmethod
-    def get_user_by_phonenumber(phonenumber: str):
+    def get_user_by_tgid(tg_id: int):
         with Session(bind=engine) as session:
             response = session.execute(
-                select(User).where(User.phonenumber == phonenumber)
+                select(User).where(User.tg_id == tg_id)
             )
-            return response.first()[0]
+            if response.first():
+                return response.first()[0]
+            else:
+                return None
 
     @staticmethod
-    def delete_user_by_id(user_id: int) -> None:
+    def delete_user_by_tg_id(tg_id: int) -> None:
         with Session(bind=engine) as session:
             session.execute(
-                delete(User).where(User.id == user_id)
+                delete(User).where(User.tg_id == tg_id)
             )
             session.commit()
 
@@ -39,7 +42,7 @@ class ProcedureCRUD(object):
 
     @staticmethod
     def add_procedure(procedure_name: str,
-                      procedure_duration: str,
+                      procedure_duration: time,
                       cost: int) -> None:
         with Session(bind=engine) as session:
             session.add(Procedure(
@@ -64,7 +67,7 @@ class ProcedureCRUD(object):
             response = session.execute(
                 select(Procedure).where()
             )
-            return response
+            return response.all()
 
     @staticmethod
     def delete_procedure_by_id(procedure_id: int) -> None:
@@ -124,10 +127,15 @@ class WorkdayCRUD(object):
                 update(Workday).values(
                     workday=workday if workday else Workday.workday,
                     worktime=worktime if worktime else Workday.worktime,
-                    availability=availability if availability else Workday.availability,
+                    availability=availability if availability is not None else Workday.availability
                 ).where(Workday.id == workday_id)
             )
             session.commit()
+            # session.query(Workday).filter(Workday.id == workday_id).update(
+            #     workday=workday if workday else Workday.workday,
+            #     worktime=worktime if worktime else Workday.worktime,
+            #     availability=availability if availability else Workday.availability
+            # )
 
     @staticmethod
     def get_workdays() -> list:
@@ -135,7 +143,7 @@ class WorkdayCRUD(object):
             response = session.execute(
                 select(Workday).where(Workday.availability == True)
             )
-            return response
+            return response.all()
 
     @staticmethod
     def get_workday_by_id(work_id: int) -> Workday:
@@ -151,4 +159,4 @@ class WorkdayCRUD(object):
             response = session.execute(
                 select(Workday).where(Workday.availability == False)
             )
-            return response
+            return response.all()

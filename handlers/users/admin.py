@@ -11,12 +11,6 @@ from states import ProcedureState, WorkdayState
 from utils.db_api import ProcedureCRUD, WorkdayCRUD
 
 
-orders = [
-    "процедура 1: 13.05.2022 на 17:15",
-    "процедура 2: 14.05.2022 на 20:15",
-    "процедура 3: 15.05.2022 на 21:15",
-]
-
 main_keyboard = [
     "Добавить процедуру",
     "Добавить рабочий день",
@@ -68,17 +62,16 @@ async def answer_cost(message: Message, state: FSMContext):
     cost_procedure = int(message.text)
     name_procedure = data.get("name_procedure")
     procedure_duration = data.get("procedure_duration")
-    # hours = data.get("hours")
-    # minutes = data.get("minutes")
+    hours = data.get("hours")
+    minutes = data.get("minutes")
     # procedure = {
     #     "procedure_name": name_procedure,
     #     "procedure_duration": time(hours, minutes),
     #     "cost": cost_procedure
     # }
     ProcedureCRUD.add_procedure(procedure_name=name_procedure,
-                                procedure_duration=procedure_duration,
-                                cost=cost_procedure
-                                )
+                                procedure_duration=time(hours, minutes),
+                                cost=cost_procedure)
     await message.answer(f"Добавлена процедура: {name_procedure} \n"
                          f"Длительностью: {procedure_duration} \n"
                          f"Стоимостью: {cost_procedure} BYN")
@@ -91,13 +84,18 @@ async def answer_cost(message: Message, state: FSMContext):
 @rate_limit(3, 'Добавить рабочий день')
 @dp.message_handler(user_id=admin_id, text="Добавить рабочий день", state=None)
 async def add_workday_admin(message: Message):
-    await message.answer("Введите дату в формате ГГГГ.ММ.ДД:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Введите дату в формате ДД.ММ.ГГГГ:", reply_markup=ReplyKeyboardRemove())
     await WorkdayState.first()
 
 
 @dp.message_handler(state=WorkdayState.Workday)
 async def add_day(message: Message, state: FSMContext):
     workday = message.text
+    workday = list(map(int, (workday.split('.')[::-1])))
+    year = workday[0]
+    month = workday[1]
+    day = workday[2]
+    workday = date(year=year, month=month, day=day)
     # async with state.proxy() as data:
     #     data["name_procedure"] = name_procedure
     await state.update_data(workday=workday)
@@ -109,10 +107,14 @@ async def add_day(message: Message, state: FSMContext):
 async def add_time(message: Message, state: FSMContext):
     data = await state.get_data()
     worktime = message.text
+    worktime = list(map(int, worktime.split('.')))
+    hours = worktime[0]
+    minutes = worktime[1]
     workday = data.get("workday")
-    # ProcedureCRUD.add_procedure(procedure_name=name_procedure,
-    #                             procedure_duration=duration_procedure,
-    #                             cost=cost_procedure)
+    worktime = time(hours, minutes)
+    WorkdayCRUD.add_workday(workday=workday,
+                            worktime=worktime
+                            )
     await message.answer(f"Добавлен рабочий день: {workday} {worktime}")
     await state.finish()
     await message.answer("Что вы хотите сделать?",
@@ -130,5 +132,5 @@ async def cancel(message: Message):
 async def show_registry(message: Message):
     workdays = WorkdayCRUD.get_my_workdays()
     for workday in workdays:
-        workday = workday[0]
-        await message.answer(f"{workday.workday} {workday.worktime}")
+        day = workday[0]
+        await message.answer(f"{day.workday} {day.worktime}")

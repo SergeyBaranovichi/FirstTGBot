@@ -10,8 +10,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     first_name = Column(Text, nullable=False)
-    last_name = Column(Text, nullable=False)
-    phonenumber = Column(Text, nullable=False, unique=True)
+    tg_id = Column(Integer, nullable=False, unique=True)
+    # phonenumber = Column(Text, nullable=False, unique=True)
     procedure_id = Column(Integer, ForeignKey('procedures.id', ondelete='CASCADE'))
     workday_id = Column(Integer, ForeignKey('workdays.id', ondelete='CASCADE'))
 
@@ -22,7 +22,7 @@ class Procedure(Base):
 
     id = Column(Integer, primary_key=True)
     procedure_name = Column(Text, nullable=False)
-    procedure_duration = Column(Text, nullable=False)
+    procedure_duration = Column(Time, nullable=False)
     cost = Column(Integer, nullable=False)
 
 

@@ -5,8 +5,8 @@ async def keyboard_for_procedures(procedures: list) -> InlineKeyboardMarkup:
     keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(
         row_width=1,
         inline_keyboard=[[InlineKeyboardButton(
-            text=f"{procedure[0].procedure_name}/n"
-                 f"Длительность: {procedure[0].procedure_duration.hour} {procedure[0].procedure_duration.minute}/n"
+            text=f"{procedure[0].procedure_name} "
+                 f"Длительность: {procedure[0].procedure_duration.hour}ч{procedure[0].procedure_duration.minute}м "
                  f"Цена: {procedure[0].cost} BYN",
             callback_data=procedure[0].id
         )] for procedure in procedures]
@@ -17,10 +17,10 @@ async def keyboard_for_procedures(procedures: list) -> InlineKeyboardMarkup:
 async def keyboard_for_workdays(workdays: list) -> InlineKeyboardMarkup:
     keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(
         row_width=1,
-        inline_keyboard=[[InlineKeyboardButton(
-            text=f"{workday[0].workday} {workday[0].worktime}",
-            callback_data=workday[0].id
-        )] for workday in workdays]
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f"{workday[0].workday} {workday[0].worktime}",
+                                  callback_data=workday[0].id
+                                  )] for workday in workdays]
     )
     return keyboard
 
