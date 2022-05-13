@@ -13,7 +13,7 @@ class UserCRUD(object):
     @staticmethod
     def add_user(user: dict):
         with Session(bind=engine) as session:
-            session.execute(
+            session.add(
                 User(**user)
             )
             session.commit()
@@ -42,7 +42,7 @@ class ProcedureCRUD(object):
                       procedure_duration: str,
                       cost: int) -> None:
         with Session(bind=engine) as session:
-            session.execute(Procedure(
+            session.add(Procedure(
                 procedure_name=procedure_name,
                 procedure_duration=procedure_duration,
                 cost=cost
@@ -97,7 +97,7 @@ class WorkdayCRUD(object):
                     worktime: time,
                     availability: bool = True):
         with Session(bind=engine) as session:
-            session.execute(
+            session.add(
                 Workday(
                     workday=workday,
                     worktime=worktime,
