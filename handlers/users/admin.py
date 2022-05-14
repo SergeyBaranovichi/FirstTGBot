@@ -15,6 +15,7 @@ main_keyboard = [
     "Добавить процедуру",
     "Добавить рабочий день",
     "Показать записи",
+    "Удалить рабочие дни",
     "Отмена",
 ]
 
@@ -134,3 +135,15 @@ async def show_registry(message: Message):
     for workday in workdays:
         day = workday[0]
         await message.answer(f"{day.workday} {day.worktime}")
+
+@rate_limit(3, 'Удалить рабочие дни')
+@dp.message_handler(user_id=admin_id, text="Удалить рабочие дни")
+    async def delete_past_workdays(message: Message):
+        day = date.today()
+        WorkdayCRUD.delete_workdays_past(day=day)
+        await message.answer("Рабочие дни удалены")
+        await message.answer("Что вы хотите сделать?",
+                     reply_markup=await show_keyboard(main_keyboard)
+                     )
+        
+        
