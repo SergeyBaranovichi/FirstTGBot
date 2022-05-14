@@ -118,6 +118,14 @@ class WorkdayCRUD(object):
             session.commit()
 
     @staticmethod
+    def delete_workdays_past(day: date) -> None:
+        with Session(bind=engine) as session:
+            session.execute(
+                delete(Workday).where(Workday.workday < day)
+            )
+            session.commit()
+        
+    @staticmethod
     def update_workday_by_id(workday_id: int,
                              workday: date = None,
                              worktime: time = None,
