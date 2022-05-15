@@ -11,7 +11,6 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     first_name = Column(Text, nullable=False)
     tg_id = Column(Integer, nullable=False, unique=True)
-    # phonenumber = Column(Text, nullable=False, unique=True)
     procedure_id = Column(Integer, ForeignKey('procedures.id', ondelete='CASCADE'))
     workday_id = Column(Integer, ForeignKey('workdays.id', ondelete='CASCADE'))
 

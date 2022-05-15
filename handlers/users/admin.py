@@ -38,8 +38,6 @@ async def add_procedure_admin(message: Message):
 @dp.message_handler(state=ProcedureState.Name)
 async def answer_name(message: Message, state: FSMContext):
     name_procedure = message.text
-    # async with state.proxy() as data:
-    #     data["name_procedure"] = name_procedure
     await state.update_data(name_procedure=name_procedure.capitalize())
     await message.answer("Введите длительность процедуры в формате ЧЧ.ММ:")
     await ProcedureState.next()
@@ -47,14 +45,17 @@ async def answer_name(message: Message, state: FSMContext):
 
 @dp.message_handler(state=ProcedureState.Duration)
 async def answer_duration(message: Message, state: FSMContext):
-    duration_procedure = message.text
-    await state.update_data(procedure_duration=duration_procedure)
-    duration_procedure = duration_procedure.split(".")
-    duration_procedure = list(map(int, duration_procedure))
-    await state.update_data(hours=duration_procedure[0])
-    await state.update_data(minutes=duration_procedure[1])
-    await message.answer("Введите стоимость процедуры:")
-    await ProcedureState.next()
+    procedure_duration = message.text
+    try:
+        procedure_duration = procedure_duration.split(".")
+        procedure_duration = list(map(int, procedure_duration))
+        hours = procedure_duration[0]
+        minutes = procedure_duration[1]
+        await state.update_data(procedure_duration=time(hour=hours, minute=minutes))
+        await message.answer("Введите стоимость процедуры:")
+        await ProcedureState.next()
+    except:
+        await message.answer("Неверное время. Введите длительность процедуры в формате ЧЧ.ММ:")
 
 
 @dp.message_handler(state=ProcedureState.Cost)
@@ -63,18 +64,11 @@ async def answer_cost(message: Message, state: FSMContext):
     cost_procedure = int(message.text)
     name_procedure = data.get("name_procedure")
     procedure_duration = data.get("procedure_duration")
-    hours = data.get("hours")
-    minutes = data.get("minutes")
-    # procedure = {
-    #     "procedure_name": name_procedure,
-    #     "procedure_duration": time(hours, minutes),
-    #     "cost": cost_procedure
-    # }
     ProcedureCRUD.add_procedure(procedure_name=name_procedure,
-                                procedure_duration=time(hours, minutes),
+                                procedure_duration=procedure_duration,
                                 cost=cost_procedure)
     await message.answer(f"Добавлена процедура: {name_procedure} \n"
-                         f"Длительностью: {procedure_duration} \n"
+                         f"Длительностью: {procedure_duration.hour}ч  {procedure_duration.minute}мин\n"
                          f"Стоимостью: {cost_procedure} BYN")
     await state.finish()
     await message.answer("Что вы хотите сделать?",
@@ -92,35 +86,40 @@ async def add_workday_admin(message: Message):
 @dp.message_handler(state=WorkdayState.Workday)
 async def add_day(message: Message, state: FSMContext):
     workday = message.text
-    workday = list(map(int, (workday.split('.')[::-1])))
-    year = workday[0]
-    month = workday[1]
-    day = workday[2]
-    workday = date(year=year, month=month, day=day)
-    # async with state.proxy() as data:
-    #     data["name_procedure"] = name_procedure
-    await state.update_data(workday=workday)
-    await message.answer("Введите рабочее время в формате ЧЧ.ММ:")
-    await WorkdayState.next()
+
+    try:
+        workday = list(map(int, (workday.split('.')[::-1])))
+        year = workday[0]
+        month = workday[1]
+        day = workday[2]
+        workday = date(year=year, month=month, day=day)
+        await state.update_data(workday=workday)
+        await message.answer("Введите рабочее время в формате ЧЧ.ММ:")
+        await WorkdayState.next()
+    except:
+        await message.answer("Неверная дата. Введите дату в формате ДД.ММ.ГГГГ:")
 
 
 @dp.message_handler(state=WorkdayState.Worktime)
 async def add_time(message: Message, state: FSMContext):
     data = await state.get_data()
     worktime = message.text
-    worktime = list(map(int, worktime.split('.')))
-    hours = worktime[0]
-    minutes = worktime[1]
     workday = data.get("workday")
-    worktime = time(hours, minutes)
-    WorkdayCRUD.add_workday(workday=workday,
-                            worktime=worktime
-                            )
-    await message.answer(f"Добавлен рабочий день: {workday} {worktime}")
-    await state.finish()
-    await message.answer("Что вы хотите сделать?",
-                         reply_markup=await show_keyboard(main_keyboard)
-                         )
+    try:
+        worktime = list(map(int, worktime.split('.')))
+        hours = worktime[0]
+        minutes = worktime[1]
+        worktime = time(hours, minutes)
+        WorkdayCRUD.add_workday(workday=workday,
+                                worktime=worktime
+                                )
+        await message.answer(f"Добавлен рабочий день: {workday} {worktime}")
+        await state.finish()
+        await message.answer("Что вы хотите сделать?",
+                             reply_markup=await show_keyboard(main_keyboard)
+                             )
+    except:
+        await message.answer("Неверное время. Введите рабочее время в формате ЧЧ.ММ:")
 
 
 @dp.message_handler(text="Отмена")
@@ -132,18 +131,22 @@ async def cancel(message: Message):
 @dp.message_handler(user_id=admin_id, text="Показать записи")
 async def show_registry(message: Message):
     workdays = WorkdayCRUD.get_my_workdays()
-    for workday in workdays:
-        day = workday[0]
-        await message.answer(f"{day.workday} {day.worktime}")
+    if len(workdays):
+        for workday in workdays:
+            day = workday[0]
+            await message.answer(f"{day.workday} {day.worktime}")
+    else:
+        await message.answer("Записей нет.")
+
 
 @rate_limit(3, 'Удалить рабочие дни')
 @dp.message_handler(user_id=admin_id, text="Удалить рабочие дни")
-    async def delete_past_workdays(message: Message):
-        day = date.today()
-        WorkdayCRUD.delete_workdays_past(day=day)
-        await message.answer("Рабочие дни удалены")
-        await message.answer("Что вы хотите сделать?",
-                     reply_markup=await show_keyboard(main_keyboard)
-                     )
+async def delete_past_workdays(message: Message):
+    day = date.today()
+    WorkdayCRUD.delete_workdays_past(day=day)
+    await message.answer("Рабочие дни удалены")
+    await message.answer("Что вы хотите сделать?",
+                         reply_markup=await show_keyboard(main_keyboard)
+                         )
         
         

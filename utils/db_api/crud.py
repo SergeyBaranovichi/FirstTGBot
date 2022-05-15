@@ -139,11 +139,6 @@ class WorkdayCRUD(object):
                 ).where(Workday.id == workday_id)
             )
             session.commit()
-            # session.query(Workday).filter(Workday.id == workday_id).update(
-            #     workday=workday if workday else Workday.workday,
-            #     worktime=worktime if worktime else Workday.worktime,
-            #     availability=availability if availability else Workday.availability
-            # )
 
     @staticmethod
     def get_workdays() -> list:
